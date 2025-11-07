@@ -1,0 +1,5 @@
+-- Si dejas el sink con auto.create=true, no hace falta.
+-- Aquí pondrías DDL manual si prefieres controlar tipos/índices en destino.
+-- Ejemplo (comentado):
+-- CREATE TABLE public.customers(...);
+-- CREATE TABLE public.orders(...);

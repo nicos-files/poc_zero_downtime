@@ -1,0 +1,18 @@
+entities:
+  customers:
+    pk: id
+    sqlserver:
+      table: dbo.customers
+      fields: [id, name, email, created_at]
+    postgres:
+      table: public.customers
+      fields: [id, name, email, created_at]
+
+  orders:
+    pk: id
+    sqlserver:
+      table: dbo.orders
+      fields: [id, customer_id, total_amount, created_at]
+    postgres:
+      table: public.orders
+      fields: [id, customer_id, total_amount, created_at]

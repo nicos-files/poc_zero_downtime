@@ -1,0 +1,213 @@
+# -----------------------------------------------------------------------------------
+# POC Zero-Downtime: SQL Server -> CDC (Debezium/Redpanda) -> PostgreSQL + Middleware
+# Incluye: SQL Server, PostgreSQL, Redpanda (Kafka), Kafka Connect, Kafka-UI,
+#          Unleash (feature flags), Middleware (FastAPI/Nest/etc.), Prometheus, Grafana
+# Usa variables desde .env (credenciales y parámetros básicos)
+# -----------------------------------------------------------------------------------
+
+services:
+  # ---------------------------- BASES DE DATOS ------------------------------------
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    container_name: sqlserver
+    # ACEPTA licencia y credenciales; SA_PASSWORD viene de .env
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "${SA_PASSWORD}"
+      MSSQL_PID: "Developer"
+      # Limita memoria dentro del motor (opcional, ayuda en POC)
+      MSSQL_MEMORY_LIMIT_MB: "4096"
+
+      MSSQL_AGENT_ENABLED: "true"
+    ports:
+      - "1433:1433"                # expone SQL Server para SSMS/DBeaver
+    volumes:
+      - ./sqlserver-init:/docker-entrypoint-initdb.d:ro   # scripts de init (DB, CDC, seed)
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      # Usa tools18 y confía en el certificado (solo local)
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$SA_PASSWORD\" -Q \"SELECT 1\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  postgres:
+    image: postgres:16.8
+    container_name: postgres
+    environment:
+      POSTGRES_USER: "${PG_USER}"
+      POSTGRES_PASSWORD: "${PG_PASSWORD}"
+      POSTGRES_DB: "${PG_DB}"
+    ports:
+      - "5432:5432"                # expone PostgreSQL para DBeaver/psql
+    command: ["postgres", "-c", "wal_level=logical"]  # habilita logical WAL por si luego replicás desde PG
+    volumes:
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro # DDL opcional de destino
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  # ------------------------------ KAFKA STACK -------------------------------------
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    container_name: redpanda
+    # Parámetros para entorno local/POC (sin ZooKeeper, bajo consumo)
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp
+      - "1"
+      - --memory
+      - 1G
+      - --reserve-memory
+      - 0M
+      - --check=false
+      - --kafka-addr
+      - "PLAINTEXT://0.0.0.0:9092"
+      - --advertise-kafka-addr
+      - "PLAINTEXT://redpanda:9092"
+
+    ports:
+      - "9092:9092"                # Kafka API (producers/consumers)
+      - "9644:9644"                # Admin/metrics (Prometheus)
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s localhost:9644/v1/status/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  connect:
+    # Kafka Connect runtime que aloja los conectores (plugins): Debezium + JDBC Sink
+    image: debezium/connect:2.6
+    container_name: connect
+    depends_on:
+      - redpanda
+    environment:
+      # Apunta a Redpanda como bootstrap de Kafka
+      BOOTSTRAP_SERVERS: redpanda:9092
+      SQLSERVER_PASSWORD: ${SA_PASSWORD}
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DB}
+      #Habilitacion para tomar variables de env
+      CONFIG_PROVIDERS: env
+      CONFIG_PROVIDERS_ENV_CLASS: org.apache.kafka.common.config.provider.EnvVarConfigProvider
+      CONFIG_PROVIDERS_ENV_PARAM_ALLOWLIST_PATTERN: ".*"
+      # Tópicos internos que usa Connect para guardar config/offset/estado
+      GROUP_ID: "1"
+      CONFIG_STORAGE_TOPIC: connect-configs
+      OFFSET_STORAGE_TOPIC: connect-offsets
+      STATUS_STORAGE_TOPIC: connect-status
+      # Conversores JSON sin schema para simplificar la POC
+      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+      # Habilita scripting de Debezium (no imprescindible, útil para transforms)
+      ENABLE_DEBEZIUM_SCRIPTING: "true"
+      # Limita heap de la JVM (evita consumo excesivo)
+      KAFKA_HEAP_OPTS: "-Xms512m -Xmx1024m"
+    ports:
+      - "8083:8083"                # REST API para registrar conectores
+    volumes:
+      - ./connect-config:/connect-config:ro  # donde dejamos los JSON de source/sink
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:8083/ | grep -qi connect || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      - redpanda
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: redpanda:9092
+    ports:
+      - "8080:8080"                # UI web para ver topics/consumidores/offsets
+
+  # ----------------------------- FEATURE FLAGS ------------------------------------
+  unleash:
+    image: unleashorg/unleash-server:latest
+    container_name: unleash
+    depends_on:
+      - postgres                   # usa Postgres como DB interna
+    environment:
+      DATABASE_URL: "postgres://postgres:${PG_PASSWORD}@postgres:5432/${PG_DB}"
+      DATABASE_SSL: "false"
+      LOG_LEVEL: "warn"
+      # Token de desarrollo inseguro (para POC). En prod: usar tokens por entorno/proyecto.
+      INIT_FRONTEND_API_TOKENS: "default:development.unleash-insecure-api-token"
+    ports:
+      - "4242:4242"                # UI/API de Unleash
+
+  # ------------------------------- MIDDLEWARE -------------------------------------
+  middleware:
+    # Tu API REST (FastAPI/Nest/Laravel); aquí asumo un Dockerfile en ./middleware
+    build:
+      context: ./middleware
+      dockerfile: Dockerfile
+    container_name: middleware
+    depends_on:
+      - sqlserver
+      - postgres
+      - unleash
+      - connect
+    environment:
+      # Conexiones a las DBs (ajusta a tu driver/código real)
+      SA_PASSWORD: "${SA_PASSWORD}"
+      PG_USER: "${PG_USER}"
+      PG_PASSWORD: "${PG_PASSWORD}"
+      PG_DB: "${PG_DB}"
+      # Unleash para flags
+      UNLEASH_URL: "http://unleash:4242/api"
+      UNLEASH_TOKEN: "${UNLEASH_TOKEN}"
+    ports:
+      - "3000:3000"                # expone la API (y /metrics para Prometheus)
+    # Tip: si usas FastAPI con Uvicorn, el Dockerfile ya lanza el servidor
+
+  # ------------------------------ OBSERVABILIDAD ----------------------------------
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    depends_on:
+      - middleware
+      - redpanda
+      - connect
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"                # UI de Prometheus (consulta/alerting básico)
+    # Prometheus leerá /metrics del middleware, connect y redpanda
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    depends_on:
+      - prometheus
+    ports:
+      - "3001:3000"                # UI de Grafana (3001 en host -> 3000 en contenedor)
+    environment:
+      # Opcional: provisión automática; en POC, configura a mano Prometheus como datasource
+      GF_SECURITY_ADMIN_PASSWORD: "admin"
+
+# -----------------------------------------------------------------------------------
+# Notas:
+# - Todas las rutas ./carpeta se asumen relativas a este docker-compose.yml
+# - Requiere un .env con:
+#       SA_PASSWORD=YourStrong!Passw0rd
+#       PG_USER=postgres
+#       PG_PASSWORD=postgres
+#       PG_DB=appdb
+#       UNLEASH_TOKEN=default:development.unleash-insecure-api-token
+# - Los scripts de init de SQL Server habilitan CDC para dbo.customers y dbo.orders
+# - Los conectores se registran vía REST en http://localhost:8083 (ver comandos abajo)
+# -----------------------------------------------------------------------------------
+
+volumes:
+  sqlserver_data: {}
