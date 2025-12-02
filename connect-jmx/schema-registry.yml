@@ -1,0 +1,7 @@
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+
+# Empezamos amplio: exportar todo atributo numérico que aparezca.
+# Luego afinamos con reglas más específicas si hace falta.
+rules:
+  - pattern: ".*"

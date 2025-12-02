@@ -1,0 +1,19 @@
+{
+  "type": "record",
+  "name": "customers_public_v2",
+  "namespace": "contracts.derived",
+  "fields": [
+    {
+      "name": "full_name",
+      "type": "string"
+    },
+    {
+      "name": "email",
+      "type": "string"
+    },
+    {
+      "name": "created_at",
+      "type": "string"
+    }
+  ]
+}
