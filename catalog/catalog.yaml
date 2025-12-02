@@ -1,0 +1,48 @@
+entities:
+  customers:
+    source:
+      topic: mssql.appdb.dbo.customers
+      key: [id]
+      # Campos que Debezium expone post-unwrap (superset)
+      fields:
+        - id
+        - name
+        - email
+        - status        # <-- extra en origen (no lo mandaremos al destino)
+        - notes         # <-- extra en origen
+        - created_at    # (nanotimestamp SQL Server)
+        - __deleted     # tombstone lógico post-unwrap
+    projection:
+      topic: customers_public_v2
+      table: public.customers
+      key: [id]
+      fields:
+        id:         { from: id,          type: int32 }
+        full_name:  { from: name,        type: string }
+        email:      { from: email,       type: string, format: email }
+        created_at: { from: created_at,  type: string, format: date-time }
+      allow_delete: true
+
+  orders:
+    source:
+      topic: mssql.appdb.dbo.orders
+      key: [id]
+      fields:
+        - id
+        - customer_id
+        - total_amount
+        - status        # <-- extra
+        - currency      # <-- extra
+        - created_at
+        - updated_at
+        - __deleted
+    projection:
+      topic: orders_public_v2
+      table: public.orders
+      key: [id]
+      fields:
+        id:           { from: id,           type: int32 }
+        customer_id:  { from: customer_id,  type: int32 }
+        total_amount: { from: total_amount, type: double }
+        created_at:   { from: created_at,   type: string, format: date-time }
+      allow_delete: true

@@ -1,0 +1,47 @@
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+
+# Exporta las métricas críticas de Source/Sink/Worker con nombres estables
+rules:
+  # ---- SINK TASK ----
+  - pattern: 'kafka.connect<type=sink-task-metrics, connector=(.*), task=(.*)><>record-send-total'
+    name: connect_task_metrics_sink_record_send_total
+    type: COUNTER
+    labels:
+      connector: "$1"
+      task: "$2"
+
+  - pattern: 'kafka.connect<type=sink-task-metrics, connector=(.*), task=(.*)><>record-lag-max'
+    name: connect_task_metrics_sink_record_lag_max
+    type: GAUGE
+    labels:
+      connector: "$1"
+    # (lag máximo percibido por el task)
+
+  # ---- SOURCE TASK ----
+  - pattern: 'kafka.connect<type=source-task-metrics, connector=(.*), task=(.*)><>poll-total'
+    name: connect_task_metrics_source_record_poll_total
+    type: COUNTER
+    labels:
+      connector: "$1"
+      task: "$2"
+
+  # ---- ERRORES POR TASK (conector genérico) ----
+  - pattern: 'kafka.connect<type=connector-task-metrics, connector=(.*), task=(.*)><>task-error-total'
+    name: connect_task_error_total
+    type: COUNTER
+    labels:
+      connector: "$1"
+      task: "$2"
+
+  # ---- WORKER ----
+  - pattern: 'kafka.connect<type=worker-metrics><>connector-count'
+    name: connect_worker_metrics_connector_count
+    type: GAUGE
+
+  # ---- REGLA GENÉRICA (fallback) ----
+  - pattern: 'kafka.connect<type=(.*?), (.*)><>(.*)'
+    name: connect_$1_$3
+    type: GAUGE
+    labels:
+      extra: "$2"

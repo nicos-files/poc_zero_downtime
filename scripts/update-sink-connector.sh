@@ -29,12 +29,19 @@ CONFIG_JSON="$(
       "connection.username": $user,
       "connection.password": $pass,
 
+      "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+      "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+      "key.converter.schemas.enable":   "true",
+      "value.converter.schemas.enable": "true",
+
       "insert.mode": "upsert",
       "primary.key.mode": "record_key",
       "primary.key.fields": "id",
       "delete.enabled": "true",
 
       "schema.evolution": "basic",
+      "auto.create": "true",
+      "auto.evolve": "true",
       "table.name.format": "${source.table}", 
       "quote.identifiers": "false",
 

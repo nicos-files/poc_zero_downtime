@@ -1,0 +1,19 @@
+{
+  "type": "record",
+  "name": "orders_public_v2",
+  "namespace": "contracts.derived",
+  "fields": [
+    {
+      "name": "customer_id",
+      "type": "int"
+    },
+    {
+      "name": "total_amount",
+      "type": "double"
+    },
+    {
+      "name": "created_at",
+      "type": "string"
+    }
+  ]
+}

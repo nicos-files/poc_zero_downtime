@@ -1,0 +1,17 @@
+-- Generated 2025-12-02T13:51:16.492111Z
+
+CREATE TABLE IF NOT EXISTS public.customers (
+  id INTEGER NOT NULL,
+  full_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (id)
+);
+
+CREATE TABLE IF NOT EXISTS public.orders (
+  id INTEGER NOT NULL,
+  customer_id INTEGER NOT NULL,
+  total_amount DOUBLE PRECISION NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (id)
+);
