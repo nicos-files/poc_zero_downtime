@@ -1,0 +1,35 @@
+{
+  "type": "record",
+  "name": "updt_join_updatespageitems_public_v2",
+  "namespace": "contracts.derived",
+  "fields": [
+    {
+      "name": "update_id",
+      "type": "int"
+    },
+    {
+      "name": "lineitem_number",
+      "type": "int"
+    },
+    {
+      "name": "specific_id",
+      "type": "int"
+    },
+    {
+      "name": "page_number",
+      "type": "string"
+    },
+    {
+      "name": "item_number",
+      "type": "int"
+    },
+    {
+      "name": "engine_spec",
+      "type": "string"
+    },
+    {
+      "name": "qty",
+      "type": "double"
+    }
+  ]
+}

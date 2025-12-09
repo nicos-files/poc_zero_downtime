@@ -1,0 +1,51 @@
+{
+  "type": "record",
+  "name": "updt_join_updateskits_public_v2",
+  "namespace": "contracts.derived",
+  "fields": [
+    {
+      "name": "update_id",
+      "type": "int"
+    },
+    {
+      "name": "specific_id",
+      "type": "int"
+    },
+    {
+      "name": "lineitem_number",
+      "type": "int"
+    },
+    {
+      "name": "kit_name",
+      "type": "string"
+    },
+    {
+      "name": "kit_action",
+      "type": "string"
+    },
+    {
+      "name": "is_newpartaction",
+      "type": "boolean"
+    },
+    {
+      "name": "is_oldpartaction",
+      "type": "boolean"
+    },
+    {
+      "name": "struct_on",
+      "type": "string"
+    },
+    {
+      "name": "struct_off",
+      "type": "string"
+    },
+    {
+      "name": "qty",
+      "type": "double"
+    },
+    {
+      "name": "ebom_id",
+      "type": "int"
+    }
+  ]
+}

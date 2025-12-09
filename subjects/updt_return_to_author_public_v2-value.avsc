@@ -1,0 +1,27 @@
+{
+  "type": "record",
+  "name": "updt_return_to_author_public_v2",
+  "namespace": "contracts.derived",
+  "fields": [
+    {
+      "name": "update_id",
+      "type": "int"
+    },
+    {
+      "name": "return_dt",
+      "type": "string"
+    },
+    {
+      "name": "return_text",
+      "type": "string"
+    },
+    {
+      "name": "return_user_id",
+      "type": "int"
+    },
+    {
+      "name": "log_id",
+      "type": "int"
+    }
+  ]
+}

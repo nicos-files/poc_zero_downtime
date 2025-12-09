@@ -1,0 +1,59 @@
+{
+  "type": "record",
+  "name": "updt_basics_public_v2",
+  "namespace": "contracts.derived",
+  "fields": [
+    {
+      "name": "update_number",
+      "type": "int"
+    },
+    {
+      "name": "title",
+      "type": "string"
+    },
+    {
+      "name": "engine_phase",
+      "type": "string"
+    },
+    {
+      "name": "user_id",
+      "type": "int"
+    },
+    {
+      "name": "spec_change_id",
+      "type": "int"
+    },
+    {
+      "name": "create_date",
+      "type": "string"
+    },
+    {
+      "name": "released",
+      "type": "boolean"
+    },
+    {
+      "name": "is_submitted",
+      "type": "boolean"
+    },
+    {
+      "name": "is_returned",
+      "type": "boolean"
+    },
+    {
+      "name": "is_copy",
+      "type": "boolean"
+    },
+    {
+      "name": "is_erp_admin",
+      "type": "boolean"
+    },
+    {
+      "name": "is_syspro_in_process",
+      "type": "boolean"
+    },
+    {
+      "name": "is_syspro_complete",
+      "type": "boolean"
+    }
+  ]
+}

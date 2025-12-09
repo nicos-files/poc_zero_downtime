@@ -1,0 +1,55 @@
+{
+  "type": "record",
+  "name": "log_ebomhistory_public_v2",
+  "namespace": "contracts.derived",
+  "fields": [
+    {
+      "name": "ebom_id",
+      "type": "int"
+    },
+    {
+      "name": "update_id",
+      "type": "int"
+    },
+    {
+      "name": "specific_id",
+      "type": "int"
+    },
+    {
+      "name": "lineitem_number",
+      "type": "int"
+    },
+    {
+      "name": "engine_spec",
+      "type": "string"
+    },
+    {
+      "name": "current_part",
+      "type": "string"
+    },
+    {
+      "name": "description",
+      "type": "string"
+    },
+    {
+      "name": "qty",
+      "type": "string"
+    },
+    {
+      "name": "new_qty_action",
+      "type": "string"
+    },
+    {
+      "name": "old_part_no",
+      "type": "string"
+    },
+    {
+      "name": "kit_name",
+      "type": "string"
+    },
+    {
+      "name": "log_dt",
+      "type": "string"
+    }
+  ]
+}

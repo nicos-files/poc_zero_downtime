@@ -1,0 +1,35 @@
+{
+  "type": "record",
+  "name": "user_master_public_v2",
+  "namespace": "contracts.derived",
+  "fields": [
+    {
+      "name": "user_login",
+      "type": "string"
+    },
+    {
+      "name": "first_name",
+      "type": "string"
+    },
+    {
+      "name": "last_name",
+      "type": "string"
+    },
+    {
+      "name": "email",
+      "type": "string"
+    },
+    {
+      "name": "created_dt",
+      "type": "string"
+    },
+    {
+      "name": "is_deleted",
+      "type": "boolean"
+    },
+    {
+      "name": "is_onhold",
+      "type": "boolean"
+    }
+  ]
+}

@@ -64,3 +64,470 @@ entities:
         id:     { from: id,     type: int32 }
         ts_utc: { from: ts_utc, type: string, format: date-time }
       allow_delete: false
+  
+
+  updt_basics:
+    source:
+      topic: mssql.appdb.dbo.UPDT_Basics
+      key: [Update_ID]
+      fields:
+        - Update_ID
+        - Update_Number
+        - Title
+        - Engine_Phase
+        - User_ID
+        - SpecChange_ID
+        - CreateDate
+        - Released
+        - isSubmitted
+        - isReturned
+        - isCopy
+        - isERPAdmin
+        - isSysproInProcess
+        - isSysproComplete
+    projection:
+      topic: updt_basics_public_v2
+      table: public.updt_basics
+      key: [id]
+      fields:
+        id:                  { from: Update_ID,         type: int32 }
+        update_number:       { from: Update_Number,     type: int32 }
+        title:               { from: Title,             type: string }
+        engine_phase:        { from: Engine_Phase,      type: string }
+        user_id:             { from: User_ID,           type: int32 }
+        spec_change_id:      { from: SpecChange_ID,     type: int32 }
+        create_date:         { from: CreateDate,        type: string, format: date-time }
+        released:            { from: Released,          type: boolean }
+        is_submitted:        { from: isSubmitted,       type: boolean }
+        is_returned:         { from: isReturned,        type: boolean }
+        is_copy:             { from: isCopy,            type: boolean }
+        is_erp_admin:        { from: isERPAdmin,        type: boolean }
+        is_syspro_in_process: { from: isSysproInProcess, type: boolean }
+        is_syspro_complete:  { from: isSysproComplete,  type: boolean }
+      allow_delete: false
+
+  
+  update_specifics1:
+    source:
+      topic: mssql.appdb.dbo.UPDateSpecifics1
+      key: [Specific_ID]
+      fields:
+        - Specific_ID
+        - Update_ID
+        - Update_Number
+        - New_Part_Number
+        - Old_Part_Number
+        - Status
+        - Due_Date
+        - Vendor
+        - Vendor_Part_Number
+        - ItemNumber
+        - NewCost
+        - ObsoleteCost
+        - isEBOM
+        - isEnteredERP
+        - isMileageTracked
+    projection:
+      topic: update_specifics1_public_v2
+      table: public.update_specifics1
+      key: [id]
+      fields:
+        id:                    { from: Specific_ID,       type: int32 }
+        update_id:             { from: Update_ID,         type: int32 }
+        update_number:         { from: Update_Number,     type: int32 }
+        new_part_number:       { from: New_Part_Number,   type: string }
+        old_part_number:       { from: Old_Part_Number,   type: string }
+        status:                { from: Status,            type: string }
+        due_date:              { from: Due_Date,          type: string, format: date-time }
+        vendor:                { from: Vendor,            type: string }
+        vendor_part_number:    { from: Vendor_Part_Number,type: string }
+        item_number:           { from: ItemNumber,        type: int32 }
+        new_cost:              { from: NewCost,           type: double }
+        obsolete_cost:         { from: ObsoleteCost,      type: double }
+        is_ebom:               { from: isEBOM,            type: boolean }
+        is_entered_erp:        { from: isEnteredERP,      type: boolean }
+        is_mileage_tracked:    { from: isMileageTracked,  type: boolean }
+      allow_delete: false
+
+
+  user_update_approvers:
+    source:
+      topic: mssql.appdb.dbo.USER_UpdateApprovers
+      key: [Approver_ID]
+      fields:
+        - Approver_ID
+        - User_ID
+        - Approval_Code
+        - Routing_ID
+    projection:
+      topic: user_update_approvers_public_v2
+      table: public.user_update_approvers
+      key: [id]
+      fields:
+        id:             { from: Approver_ID,   type: int32 }
+        user_id:        { from: User_ID,       type: int32 }
+        approval_code:  { from: Approval_Code, type: string }
+        routing_id:     { from: Routing_ID,    type: int32 }
+      allow_delete: false
+
+  updt_join_updates_routings:
+    source:
+      topic: mssql.appdb.dbo.UPDT_JOIN_UpdatesRoutings
+      key: [UpdateRouting_ID]
+      fields:
+        - UpdateRouting_ID
+        - Update_ID
+        - Routing_ID
+        - Routing_Order
+    projection:
+      topic: updt_join_updates_routings_public_v2
+      table: public.updt_join_updates_routings
+      key: [id]
+      fields:
+        id:             { from: UpdateRouting_ID, type: int32 }
+        update_id:      { from: Update_ID,        type: int32 }
+        routing_id:     { from: Routing_ID,       type: int32 }
+        routing_order:  { from: Routing_Order,    type: int32 }
+      allow_delete: false
+
+  updt_return_to_author:
+    source:
+      topic: mssql.appdb.dbo.UPDT_ReturnToAuthor
+      key: [Return_ID]
+      fields:
+        - Return_ID
+        - Update_ID
+        - Return_DT
+        - Return_Text
+        - Return_UserID
+        - Log_ID
+    projection:
+      topic: updt_return_to_author_public_v2
+      table: public.updt_return_to_author
+      key: [id]
+      fields:
+        id:            { from: Return_ID,     type: int32 }
+        update_id:     { from: Update_ID,     type: int32 }
+        return_dt:     { from: Return_DT,     type: string, format: date-time }
+        return_text:   { from: Return_Text,   type: string }
+        return_user_id: { from: Return_UserID, type: int32 }
+        log_id:        { from: Log_ID,        type: int32 }
+      allow_delete: false
+  bom_master:
+    source:
+      topic: mssql.appdb.dbo.BOM_Master
+      key: [BOM_ID]
+      fields:
+        - BOM_ID
+        - User_ID
+        - Update_ID
+        - LineItem_Number
+        - Create_DT
+        - Modify_DT
+    projection:
+      topic: bom_master_public_v2
+      table: public.bom_master
+      key: [id]
+      fields:
+        id:              { from: BOM_ID,          type: int32 }
+        user_id:         { from: User_ID,         type: int32 }
+        update_id:       { from: Update_ID,       type: int32 }
+        lineitem_number: { from: LineItem_Number, type: int32 }
+        create_dt:       { from: Create_DT,       type: string, format: date-time }
+        modify_dt:       { from: Modify_DT,       type: string, format: date-time }
+      allow_delete: false
+
+  bom_operationtypes:
+    source:
+      topic: mssql.appdb.dbo.BOM_OperationTypes
+      key: [OpType_ID]
+      fields:
+        - OpType_ID
+        - OpType_Name
+    projection:
+      topic: bom_operationtypes_public_v2
+      table: public.bom_operationtypes
+      key: [id]
+      fields:
+        id:   { from: OpType_ID,   type: int32 }
+        name: { from: OpType_Name, type: string }
+      allow_delete: false
+
+  bom_operations:
+    source:
+      topic: mssql.appdb.dbo.BOM_Operations
+      key: [Op_ID]
+      fields:
+        - Op_ID
+        - OpType_ID
+        - OpType_Name
+        - BOM_ID
+        - WorkCenter
+        - SetUpTime
+        - LeadTime
+        - QtyPer
+        - UOM
+        - Route
+    projection:
+      topic: bom_operations_public_v2
+      table: public.bom_operations
+      key: [id]
+      fields:
+        id:          { from: Op_ID,        type: int32 }
+        bom_id:      { from: BOM_ID,      type: int32 }
+        optype_id:   { from: OpType_ID,   type: int32 }
+        optype_name: { from: OpType_Name, type: string }
+        workcenter:  { from: WorkCenter,  type: string }
+        setup_time:  { from: SetUpTime,   type: double }
+        lead_time:   { from: LeadTime,    type: double }
+        qty_per:     { from: QtyPer,      type: double }
+        uom:         { from: UOM,         type: string }
+        route:       { from: Route,       type: int32 }
+      allow_delete: false
+
+  bom_childpartnumbers:
+    source:
+      topic: mssql.appdb.dbo.BOM_ChildPartNumbers
+      key: [CP_ID]
+      fields:
+        - CP_ID
+        - BOM_ID
+        - ChildPartNumber
+        - Qty
+        - OrderBy
+        - Route
+    projection:
+      topic: bom_childpartnumbers_public_v2
+      table: public.bom_childpartnumbers
+      key: [id]
+      fields:
+        id:               { from: CP_ID,           type: int32 }
+        bom_id:           { from: BOM_ID,          type: int32 }
+        child_partnumber: { from: ChildPartNumber, type: string }
+        qty:              { from: Qty,             type: double }
+        order_by:         { from: OrderBy,         type: int32 }
+        route:            { from: Route,           type: int32 }
+      allow_delete: false
+
+  data_kits:
+    source:
+      topic: mssql.appdb.dbo.DATA_Kits
+      key: [Kit_ID]
+      fields:
+        - Kit_ID
+        - Kit_Name
+        - Kit_Desc
+        - isDeleted
+        - Phase_Number
+        - isBom
+    projection:
+      topic: data_kits_public_v2
+      table: public.data_kits
+      key: [id]
+      fields:
+        id:           { from: Kit_ID,      type: int32 }
+        kit_name:     { from: Kit_Name,    type: string }
+        kit_desc:     { from: Kit_Desc,    type: string }
+        is_deleted:   { from: isDeleted,   type: boolean }
+        phase_number: { from: Phase_Number,type: string }
+        is_bom:       { from: isBom,       type: boolean }
+      allow_delete: false
+
+
+  updt_join_updatespageitems:
+    source:
+      topic: mssql.appdb.dbo.UPDT_JOIN_UpdatesPageItems
+      key: [PageItem_ID]
+      fields:
+        - PageItem_ID
+        - Update_ID
+        - LineItem_Number
+        - Specific_ID
+        - Page_Number
+        - Item_Number
+        - Engine_Spec
+        - Qty
+    projection:
+      topic: updt_join_updatespageitems_public_v2
+      table: public.updt_join_updatespageitems
+      key: [id]
+      fields:
+        id:              { from: PageItem_ID,     type: int32 }
+        update_id:       { from: Update_ID,       type: int32 }
+        lineitem_number: { from: LineItem_Number, type: int32 }
+        specific_id:     { from: Specific_ID,     type: int32 }
+        page_number:     { from: Page_Number,     type: string }
+        item_number:     { from: Item_Number,     type: int32 }
+        engine_spec:     { from: Engine_Spec,     type: string }
+        qty:             { from: Qty,             type: double }
+      allow_delete: false
+
+
+  updt_join_updateskits:
+    source:
+      topic: mssql.appdb.dbo.UPDT_JOIN_UpdatesKits
+      key: [Join_ID]
+      fields:
+        - Join_ID
+        - Update_ID
+        - Specific_ID
+        - LineItem_Number
+        - Kit_Name
+        - Kit_Action
+        - isNewPartAction
+        - isOldPartAction
+        - StructOn
+        - StructOff
+        - Qty
+        - EBOM_ID
+    projection:
+      topic: updt_join_updateskits_public_v2
+      table: public.updt_join_updateskits
+      key: [id]
+      fields:
+        id:               { from: Join_ID,        type: int32 }
+        update_id:        { from: Update_ID,      type: int32 }
+        specific_id:      { from: Specific_ID,    type: int32 }
+        lineitem_number:  { from: LineItem_Number, type: int32 }
+        kit_name:         { from: Kit_Name,       type: string }
+        kit_action:       { from: Kit_Action,     type: string }
+        is_newpartaction: { from: isNewPartAction, type: boolean }
+        is_oldpartaction: { from: isOldPartAction, type: boolean }
+        struct_on:        { from: StructOn,       type: string, format: date-time }
+        struct_off:       { from: StructOff,      type: string, format: date-time }
+        qty:              { from: Qty,            type: double }
+        ebom_id:          { from: EBOM_ID,        type: int32 }
+      allow_delete: false
+
+  ebom_062104:
+    source:
+      topic: mssql.appdb.dbo.EBOM_062104
+      key: [EBOM_ID]
+      fields:
+        - EBOM_ID
+        - Update_ID
+        - Specific_ID
+        - LineItem_Number
+        - Engine_Spec
+        - Current_Part_Number
+        - DESCRIPTION
+        - Qty
+        - New_Qty_w_Action
+        - Old_Part_No
+        - Kit_Name
+        - Date_Added
+    projection:
+      topic: ebom_062104_public_v2
+      table: public.ebom_062104
+      key: [id]
+      fields:
+        id:                { from: EBOM_ID,            type: int32 }
+        update_id:         { from: Update_ID,          type: int32 }
+        specific_id:       { from: Specific_ID,        type: int32 }
+        lineitem_number:   { from: LineItem_Number,    type: int32 }
+        engine_spec:       { from: Engine_Spec,        type: string }
+        current_part:      { from: Current_Part_Number,type: string }
+        description:       { from: DESCRIPTION,        type: string }
+        qty:               { from: Qty,                type: string }
+        new_qty_action:    { from: New_Qty_w_Action,   type: string }
+        old_part_no:       { from: Old_Part_No,        type: string }
+        kit_name:          { from: Kit_Name,           type: string }
+        date_added:        { from: Date_Added,         type: string, format: date-time }
+      allow_delete: false
+
+
+  log_ebomhistory:
+    source:
+      topic: mssql.appdb.dbo.LOG_EBOMHistory
+      key: [Log_ID]
+      fields:
+        - Log_ID
+        - EBOM_ID
+        - Update_ID
+        - Specific_ID
+        - LineItem_Number
+        - Engine_Spec
+        - Current_Part_Number
+        - DESCRIPTION
+        - Qty
+        - New_Qty_w_Action
+        - Old_Part_No
+        - Kit_Name
+        - Log_DT
+    projection:
+      topic: log_ebomhistory_public_v2
+      table: public.log_ebomhistory
+      key: [id]
+      fields:
+        id:              { from: Log_ID,             type: int32 }
+        ebom_id:         { from: EBOM_ID,            type: int32 }
+        update_id:       { from: Update_ID,          type: int32 }
+        specific_id:     { from: Specific_ID,        type: int32 }
+        lineitem_number: { from: LineItem_Number,    type: int32 }
+        engine_spec:     { from: Engine_Spec,        type: string }
+        current_part:    { from: Current_Part_Number,type: string }
+        description:     { from: DESCRIPTION,        type: string }
+        qty:             { from: Qty,                type: string }
+        new_qty_action:  { from: New_Qty_w_Action,   type: string }
+        old_part_no:     { from: Old_Part_No,        type: string }
+        kit_name:        { from: Kit_Name,           type: string }
+        log_dt:          { from: Log_DT,             type: string, format: date-time }
+      allow_delete: false
+
+
+  updt_join_updatesebom:
+    source:
+      topic: mssql.appdb.dbo.UPDT_JOIN_UpdatesEBOM
+      key: [Join_ID]
+      fields:
+        - Join_ID
+        - EBOM_ID
+        - Update_ID
+        - Specific_ID
+        - isNewPartAction
+        - isOldPartAction
+        - LineItem_Number
+        - ObsCC
+    projection:
+      topic: updt_join_updatesebom_public_v2
+      table: public.updt_join_updatesebom
+      key: [id]
+      fields:
+        id:               { from: Join_ID,         type: int32 }
+        ebom_id:          { from: EBOM_ID,         type: int32 }
+        update_id:        { from: Update_ID,       type: int32 }
+        specific_id:      { from: Specific_ID,     type: int32 }
+        is_newpartaction: { from: isNewPartAction, type: boolean }
+        is_oldpartaction: { from: isOldPartAction, type: boolean }
+        lineitem_number:  { from: LineItem_Number, type: int32 }
+        obs_cc:           { from: ObsCC,           type: string }
+      allow_delete: false
+
+
+  user_master:
+    source:
+      topic: mssql.appdb.dbo.USER_Master
+      key: [User_ID]
+      fields:
+        - User_ID
+        - User_Login
+        - User_FirstName
+        - User_LastName
+        - User_Email
+        - Created_DT
+        - isDeleted
+        - isOnHold
+    projection:
+      topic: user_master_public_v2
+      table: public.user_master
+      key: [id]
+      fields:
+        id:          { from: User_ID,       type: int32 }
+        user_login:  { from: User_Login,    type: string }
+        first_name:  { from: User_FirstName,type: string }
+        last_name:   { from: User_LastName, type: string }
+        email:       { from: User_Email,    type: string, format: email }
+        created_dt:  { from: Created_DT,    type: string, format: date-time }
+        is_deleted:  { from: isDeleted,     type: boolean }
+        is_onhold:   { from: isOnHold,      type: boolean }
+      allow_delete: false

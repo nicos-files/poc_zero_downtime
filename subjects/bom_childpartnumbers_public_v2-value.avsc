@@ -1,0 +1,27 @@
+{
+  "type": "record",
+  "name": "bom_childpartnumbers_public_v2",
+  "namespace": "contracts.derived",
+  "fields": [
+    {
+      "name": "bom_id",
+      "type": "int"
+    },
+    {
+      "name": "child_partnumber",
+      "type": "string"
+    },
+    {
+      "name": "qty",
+      "type": "double"
+    },
+    {
+      "name": "order_by",
+      "type": "int"
+    },
+    {
+      "name": "route",
+      "type": "int"
+    }
+  ]
+}

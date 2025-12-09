@@ -1,0 +1,11 @@
+{
+  "type": "record",
+  "name": "bom_operationtypes_public_v2",
+  "namespace": "contracts.derived",
+  "fields": [
+    {
+      "name": "name",
+      "type": "string"
+    }
+  ]
+}

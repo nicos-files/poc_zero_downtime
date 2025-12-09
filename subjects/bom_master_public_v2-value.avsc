@@ -1,0 +1,27 @@
+{
+  "type": "record",
+  "name": "bom_master_public_v2",
+  "namespace": "contracts.derived",
+  "fields": [
+    {
+      "name": "user_id",
+      "type": "int"
+    },
+    {
+      "name": "update_id",
+      "type": "int"
+    },
+    {
+      "name": "lineitem_number",
+      "type": "int"
+    },
+    {
+      "name": "create_dt",
+      "type": "string"
+    },
+    {
+      "name": "modify_dt",
+      "type": "string"
+    }
+  ]
+}

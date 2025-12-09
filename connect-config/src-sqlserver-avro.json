@@ -10,7 +10,7 @@
     "database.encrypt": "true",
     "database.trustServerCertificate": "true",
     "database.names": "appdb",
-    "table.include.list": "dbo.customers,dbo.heartbeat,dbo.orders",
+    "table.include.list": "dbo.BOM_ChildPartNumbers,dbo.BOM_Master,dbo.BOM_OperationTypes,dbo.BOM_Operations,dbo.DATA_Kits,dbo.EBOM_062104,dbo.LOG_EBOMHistory,dbo.UPDT_Basics,dbo.UPDT_JOIN_UpdatesEBOM,dbo.UPDT_JOIN_UpdatesKits,dbo.UPDT_JOIN_UpdatesPageItems,dbo.UPDT_JOIN_UpdatesRoutings,dbo.UPDT_ReturnToAuthor,dbo.UPDateSpecifics1,dbo.USER_Master,dbo.USER_UpdateApprovers,dbo.customers,dbo.heartbeat,dbo.orders",
     "topic.prefix": "mssql",
     "tombstones.on.delete": "false",
     "key.converter": "io.confluent.connect.avro.AvroConverter",

@@ -154,63 +154,72 @@ smoke:
 
 	@echo ""
 	@echo "==========================================="
-	@echo "===> Verificando topics CDC de Debezium en Redpanda"
+	@echo "===> Verificando topics CDC de Debezium + topics públicos v3 (TODAS las entidades)"
 	@echo "==========================================="
-	@docker compose exec -T redpanda rpk topic list | grep mssql.appdb.dbo.customers  || (echo "ERROR: falta topic customers" && exit 1)
-	@docker compose exec -T redpanda rpk topic list | grep mssql.appdb.dbo.orders     || (echo "ERROR: falta topic orders" && exit 1)
-	@docker compose exec -T redpanda rpk topic list | grep mssql.appdb.dbo.heartbeat  || (echo "ERROR: falta topic heartbeat" && exit 1)
-
+	# 1) Generar listado de entidades desde el catálogo (dentro de tools)
+	@docker compose run --rm -T tools bash -lc './tools/scripts/catalog_entities.sh' > /tmp/entities.txt
+	@echo "Entidades detectadas:"
+	@cat /tmp/entities.txt
 	@echo ""
-	@echo "==========================================="
-	@echo "===> Verificando topics públicos generados por ksqlDB (v3 / Avro)"
-	@echo "==========================================="
-	@docker compose exec -T redpanda rpk topic list | grep customers_public_v3_avro   || (echo "ERROR: falta topic customers_public_v3_avro" && exit 1)
-	@docker compose exec -T redpanda rpk topic list | grep orders_public_v3_avro      || (echo "ERROR: falta topic orders_public_v3_avro" && exit 1)
-	@docker compose exec -T redpanda rpk topic list | grep heartbeat_public_v3_avro   || (echo "ERROR: falta topic heartbeat_public_v3_avro" && exit 1)
+	# 2) Loop en la shell del host, usando docker compose exec normalmente
+	@while read NAME SRC_TOPIC PROJ_TOPIC TABLE; do \
+	  echo "---- $$NAME ----"; \
+	  echo "  * Esperando topic CDC: $$SRC_TOPIC"; \
+	  docker compose exec -T redpanda rpk topic list | grep "$$SRC_TOPIC" \
+	    || { echo "❌ ERROR: falta topic CDC $$SRC_TOPIC"; exit 1; }; \
+	  TOPIC_V3="$${NAME}_public_v3_avro"; \
+	  echo "  * Esperando topic público v3: $$TOPIC_V3"; \
+	  docker compose exec -T redpanda rpk topic list | grep "$$TOPIC_V3" \
+	    || { echo "❌ ERROR: falta topic $$TOPIC_V3"; exit 1; }; \
+	done < /tmp/entities.txt
+
 
 	@echo ""
 	@echo "==========================================="
 	@echo "===> Verificando streams en ksqlDB (SHOW STREAMS)"
 	@echo "==========================================="
-	@docker compose run --rm -T tools bash -lc 'curl -s -X POST http://ksqldb-server:8088/ksql -H "Content-Type: application/vnd.ksql.v1+json" -d "{\"ksql\":\"SHOW STREAMS;\"}" | jq .'
+	@docker compose exec -T ksqldb-server bash -lc 'curl -s -X POST http://localhost:8088/ksql -H "Content-Type: application/vnd.ksql.v1+json" -d "{\"ksql\":\"SHOW STREAMS;\"}"'
+
+
 
 	@echo ""
 	@echo "==========================================="
-	@echo "===> Verificando datos en Postgres"
+	@echo "===> Verificando datos en Postgres (TODAS las entidades)"
 	@echo "==========================================="
-	@docker compose exec -T postgres \
-	  psql -U "$${PG_USER:-postgres}" -d "$${PG_DB:-appdb}" -c "SELECT COUNT(*) AS customers  FROM public.customers;"
-	@docker compose exec -T postgres \
-	  psql -U "$${PG_USER:-postgres}" -d "$${PG_DB:-appdb}" -c "SELECT COUNT(*) AS orders     FROM public.orders;"
-	@docker compose exec -T postgres \
-	  psql -U "$${PG_USER:-postgres}" -d "$${PG_DB:-appdb}" -c "SELECT COUNT(*) AS heartbeat  FROM public.heartbeat;"
+	@docker compose run --rm -T tools bash -lc './tools/scripts/catalog_entities.sh' | \
+	while read NAME SRC_TOPIC PROJ_TOPIC TABLE ; do \
+	  echo "---- $$NAME ----"; \
+	  echo "  * SELECT COUNT(*) FROM $$TABLE"; \
+	  docker compose exec -T postgres \
+	    psql -U "$${PG_USER:-postgres}" -d "$${PG_DB:-appdb}" \
+	    -c "SELECT COUNT(*) AS $$NAME FROM $$TABLE;"; \
+	done
+
+
 
 	@echo ""
 	@echo "==========================================="
-	@echo "===> Comparando SQL Server vs Postgres"
+	@echo "===> Comparando SQL Server vs Postgres (TODAS las entidades)"
 	@echo "==========================================="
 	@MSSQL_PW="$$(docker compose exec -T connect bash -lc 'printenv SQLSERVER_PASSWORD')" ; \
-	MSYS_NO_PATHCONV=1 docker compose exec -T sqlserver /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$$MSSQL_PW" -Q "SET NOCOUNT ON; USE appdb; SELECT COUNT(*) AS customers FROM dbo.customers;" > /tmp/mssql_customers.txt ; \
-	MSSQL_C="$$(tail -n 1 /tmp/mssql_customers.txt | tr -d ' \r\n')" ; \
-	PG_C="$$(docker compose exec -T postgres psql -U "$${PG_USER:-postgres}" -d "$${PG_DB:-appdb}" -t -c "SELECT COUNT(*) FROM public.customers;" | tr -d ' \r\n')" ; \
-	echo "Customers: SQLServer=$$MSSQL_C vs Postgres=$$PG_C" ; \
-	[ "$$MSSQL_C" = "$$PG_C" ] || (echo "❌ ERROR: mismatch customers" && exit 1)
+	docker compose run --rm -T tools bash -lc './tools/scripts/catalog_entities.sh' | \
+	while read NAME SRC_TOPIC PROJ_TOPIC TABLE ; do \
+	  SRC_TABLE="$${SRC_TOPIC##*.}"; \
+	  echo "---- $$NAME ----"; \
+	  echo "  * Comparando dbo.$$SRC_TABLE vs $$TABLE"; \
+	  MSSQL_C="$$(MSYS_NO_PATHCONV=1 docker compose exec -T sqlserver \
+	    /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$$MSSQL_PW" \
+	    -Q "SET NOCOUNT ON; USE appdb; SELECT COUNT(*) AS c FROM dbo.$$SRC_TABLE;" \
+	    | tail -n 1 | tr -d ' \r\n')" ; \
+	  PG_C="$$(docker compose exec -T postgres \
+	    psql -U "$${PG_USER:-postgres}" -d "$${PG_DB:-appdb}" -t \
+	    -c "SELECT COUNT(*) FROM $$TABLE;" | tr -d ' \r\n')" ; \
+	  echo "    SQLServer=$$MSSQL_C  Postgres=$$PG_C" ; \
+	  [ "$$MSSQL_C" = "$$PG_C" ] || (echo "❌ ERROR: mismatch $$NAME" && exit 1) ; \
+	done
 
-	@MSSQL_PW="$$(docker compose exec -T connect bash -lc 'printenv SQLSERVER_PASSWORD')" ; \
-	MSYS_NO_PATHCONV=1 docker compose exec -T sqlserver /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$$MSSQL_PW" -Q "SET NOCOUNT ON; USE appdb; SELECT COUNT(*) AS orders FROM dbo.orders;" > /tmp/mssql_orders.txt ; \
-	MSSQL_O="$$(tail -n 1 /tmp/mssql_orders.txt | tr -d ' \r\n')" ; \
-	PG_O="$$(docker compose exec -T postgres psql -U "$${PG_USER:-postgres}" -d "$${PG_DB:-appdb}" -t -c "SELECT COUNT(*) FROM public.orders;" | tr -d ' \r\n')" ; \
-	echo "Orders:    SQLServer=$$MSSQL_O vs Postgres=$$PG_O" ; \
-	[ "$$MSSQL_O" = "$$PG_O" ] || (echo "❌ ERROR: mismatch orders" && exit 1)
-
-	@MSSQL_PW="$$(docker compose exec -T connect bash -lc 'printenv SQLSERVER_PASSWORD')" ; \
-	MSYS_NO_PATHCONV=1 docker compose exec -T sqlserver /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$$MSSQL_PW" -Q "SET NOCOUNT ON; USE appdb; SELECT COUNT(*) AS hb FROM dbo.heartbeat;" > /tmp/mssql_hb.txt ; \
-	MSSQL_H="$$(tail -n 1 /tmp/mssql_hb.txt | tr -d ' \r\n')" ; \
-	PG_H="$$(docker compose exec -T postgres psql -U "$${PG_USER:-postgres}" -d "$${PG_DB:-appdb}" -t -c "SELECT COUNT(*) FROM public.heartbeat;" | tr -d ' \r\n')" ; \
-	echo "Heartbeat: SQLServer=$$MSSQL_H vs Postgres=$$PG_H" ; \
-	[ "$$MSSQL_H" = "$$PG_H" ] || (echo "❌ ERROR: mismatch heartbeat" && exit 1)
 
 	@echo ""
 	@echo "==========================================="
-	@echo "✔️  COMPLETO: pipeline CDC → Kafka → ksql → sinks → Postgres verificado"
+	@echo "✔️  COMPLETO: pipeline CDC → Kafka → ksql → sinks → Postgres verificado (todas las entidades)"
 	@echo "==========================================="

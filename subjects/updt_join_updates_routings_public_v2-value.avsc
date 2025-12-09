@@ -1,0 +1,19 @@
+{
+  "type": "record",
+  "name": "updt_join_updates_routings_public_v2",
+  "namespace": "contracts.derived",
+  "fields": [
+    {
+      "name": "update_id",
+      "type": "int"
+    },
+    {
+      "name": "routing_id",
+      "type": "int"
+    },
+    {
+      "name": "routing_order",
+      "type": "int"
+    }
+  ]
+}

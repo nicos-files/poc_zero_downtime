@@ -1,4 +1,4 @@
--- Generated 2025-12-09T08:59:54.571226Z  entity=heartbeat
+-- Generated 2025-12-09T17:43:25.409154Z  entity=heartbeat
 CREATE STREAM IF NOT EXISTS heartbeat_base
   WITH (
     KAFKA_TOPIC='mssql.appdb.dbo.heartbeat',

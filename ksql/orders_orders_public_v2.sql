@@ -1,4 +1,4 @@
--- Generated 2025-12-09T08:59:54.465110Z  entity=orders
+-- Generated 2025-12-09T17:43:25.289449Z  entity=orders
 CREATE STREAM IF NOT EXISTS orders_base
   WITH (
     KAFKA_TOPIC='mssql.appdb.dbo.orders',

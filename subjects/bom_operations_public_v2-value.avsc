@@ -1,0 +1,43 @@
+{
+  "type": "record",
+  "name": "bom_operations_public_v2",
+  "namespace": "contracts.derived",
+  "fields": [
+    {
+      "name": "bom_id",
+      "type": "int"
+    },
+    {
+      "name": "optype_id",
+      "type": "int"
+    },
+    {
+      "name": "optype_name",
+      "type": "string"
+    },
+    {
+      "name": "workcenter",
+      "type": "string"
+    },
+    {
+      "name": "setup_time",
+      "type": "double"
+    },
+    {
+      "name": "lead_time",
+      "type": "double"
+    },
+    {
+      "name": "qty_per",
+      "type": "double"
+    },
+    {
+      "name": "uom",
+      "type": "string"
+    },
+    {
+      "name": "route",
+      "type": "int"
+    }
+  ]
+}

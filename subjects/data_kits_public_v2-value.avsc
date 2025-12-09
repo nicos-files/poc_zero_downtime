@@ -1,0 +1,27 @@
+{
+  "type": "record",
+  "name": "data_kits_public_v2",
+  "namespace": "contracts.derived",
+  "fields": [
+    {
+      "name": "kit_name",
+      "type": "string"
+    },
+    {
+      "name": "kit_desc",
+      "type": "string"
+    },
+    {
+      "name": "is_deleted",
+      "type": "boolean"
+    },
+    {
+      "name": "phase_number",
+      "type": "string"
+    },
+    {
+      "name": "is_bom",
+      "type": "boolean"
+    }
+  ]
+}

@@ -200,35 +200,35 @@ def gen_ksql(entity_name, source_topic, proj_topic, proj_fields, key_fields):
     return "\n".join(lines) + "\n"
 
 
-def gen_ksql_avro_v3(entity_name, proj_fields, key_fields):
+def gen_ksql_avro_v3(entity_name, source_topic, proj_fields, key_fields):
     """
-    Genera un stream AVRO v3 para cada entidad, siguiendo el patrón
-    que ya probaste a mano para CUSTOMERS_PUBLIC_V3_AVRO.
+    Genera un stream AVRO v3 para cada entidad y se asegura de que
+    el stream base (<entity>_base) exista, igual que en gen_ksql.
 
-    - Para customers:
-        CREATE OR REPLACE STREAM CUSTOMERS_PUBLIC_V3_AVRO ...
-        SELECT
-          CUSTOMERS_BASE.ROWKEY AS ROWKEY,
-          CAST(CUSTOMERS_BASE.ID AS INTEGER) AS id,
-          CUSTOMERS_BASE.NAME AS full_name,
-          CUSTOMERS_BASE.EMAIL AS email
-        FROM CUSTOMERS_BASE ...
-
-    - Para orders:
-        CREATE OR REPLACE STREAM ORDERS_PUBLIC_V3_AVRO ...
-        SELECT
-          ORDERS_BASE.ROWKEY AS ROWKEY,
-          CAST(ORDERS_BASE.ID AS INTEGER) AS id,
-          CAST(ORDERS_BASE.CUSTOMER_ID AS INTEGER) AS customer_id,
-          CAST(ORDERS_BASE.TOTAL_AMOUNT AS DOUBLE) AS total_amount
-        FROM ORDERS_BASE ...
+    - Siempre hace:
+        CREATE STREAM IF NOT EXISTS <entity>_base WITH (... AVRO ...);
+      antes del CREATE OR REPLACE STREAM <ENTITY>_PUBLIC_V3_AVRO ...
     """
-    base_alias = f"{entity_name}_base"                  # customers_base / orders_base
+    base_name  = f"{entity_name}_base"
+    base_alias = base_name
     stream_name = f"{entity_name.upper()}_PUBLIC_V3_AVRO"
-    topic_name = f"{entity_name}_public_v3_avro".lower()
+    topic_name  = f"{entity_name}_public_v3_avro".lower()
 
     lines = []
     lines.append(f"-- Generated V3 Avro stream for {entity_name}")
+
+    # 1) Aseguramos el stream base (igual patrón que gen_ksql)
+    lines.append(f"CREATE STREAM IF NOT EXISTS {base_name}")
+    lines.append("  WITH (")
+    lines.append(f"    KAFKA_TOPIC='{source_topic}',")
+    lines.append("    VALUE_FORMAT='AVRO',")
+    lines.append("    KEY_FORMAT='AVRO',")
+    lines.append("    PARTITIONS=1,")
+    lines.append("    REPLICAS=1")
+    lines.append("  );")
+    lines.append("")
+
+    # 2) Stream público V3 AVRO
     lines.append(f"CREATE OR REPLACE STREAM {stream_name}")
     lines.append("WITH (")
     lines.append(f"  KAFKA_TOPIC = '{topic_name}',")
@@ -239,31 +239,36 @@ def gen_ksql_avro_v3(entity_name, proj_fields, key_fields):
     lines.append(") AS")
     lines.append("SELECT")
 
-    select_parts = [f"  {base_alias}.ROWKEY        AS ROWKEY"]
+    # ROWKEY siempre primero
+    select_parts = [f"  {base_alias}.ROWKEY ROWKEY"]
 
     if entity_name == "customers":
-        # Copia fiel de tu CUSTOMERS_PUBLIC_V3_AVRO actual
-        select_parts.append(f"  ,CAST({base_alias}.ID AS INTEGER) AS id")
-        select_parts.append(f"  ,{base_alias}.NAME          AS full_name")
-        select_parts.append(f"  ,{base_alias}.EMAIL         AS email")
+        # *** MUY IMPORTANTE ***
+        # Mantener EXACTAMENTE el esquema viejo:
+        #   ID, FULL_NAME, EMAIL  (mayúsculas, sin backticks)
+        select_parts.append(f"  ,CAST({base_alias}.ID AS INTEGER) ID")
+        select_parts.append(f"  ,{base_alias}.NAME FULL_NAME")
+        select_parts.append(f"  ,{base_alias}.EMAIL EMAIL")
 
     elif entity_name == "orders":
-        # Mismo patrón aplicado a orders
-        select_parts.append(f"  ,CAST({base_alias}.ID AS INTEGER) AS id")
-        select_parts.append(f"  ,CAST({base_alias}.CUSTOMER_ID AS INTEGER) AS customer_id")
-        select_parts.append(f"  ,CAST({base_alias}.TOTAL_AMOUNT AS DOUBLE) AS total_amount")
-        # Si más adelante querés agregar created_at, acá lo sumamos
+        # También mantenemos el estilo viejo:
+        #   ID, CUSTOMER_ID, TOTAL_AMOUNT
+        select_parts.append(f"  ,CAST({base_alias}.ID AS INTEGER) ID")
+        select_parts.append(f"  ,CAST({base_alias}.CUSTOMER_ID AS INTEGER) CUSTOMER_ID")
+        select_parts.append(f"  ,CAST({base_alias}.TOTAL_AMOUNT AS DOUBLE) TOTAL_AMOUNT")
 
     else:
-        # fallback genérico: usar la proyección estándar
+        # Fallback genérico: usar proyección estándar con backticks/minúsculas
         for out_name, spec in proj_fields.items():
             select_parts.append("  ," + ksql_select_expr(out_name, spec, base_alias))
 
     lines.extend(select_parts)
-    lines.append(f"FROM {entity_name}_base {base_alias}")
+    lines.append(f"FROM {base_name} {base_alias}")
     lines.append("EMIT CHANGES;")
 
     return "\n".join(lines) + "\n"
+
+
 
 
 
@@ -578,7 +583,7 @@ def main():
         ddl_all.append(ddl_line(ent, table, proj_fields))
 
         # 5) NUEVO: ksql v3 AVRO (CUSTOMERS_PUBLIC_V3_AVRO, ORDERS_PUBLIC_V3_AVRO)
-        ksql_avro_v3_sql = gen_ksql_avro_v3(name, proj_fields, key_fields)
+        ksql_avro_v3_sql = gen_ksql_avro_v3(name, source_topic, proj_fields, key_fields)
         with open(f"ksql/{name}_public_v3_avro.sql", "w", encoding="utf-8") as f:
             f.write(ksql_avro_v3_sql)
 

@@ -1,0 +1,63 @@
+{
+  "type": "record",
+  "name": "update_specifics1_public_v2",
+  "namespace": "contracts.derived",
+  "fields": [
+    {
+      "name": "update_id",
+      "type": "int"
+    },
+    {
+      "name": "update_number",
+      "type": "int"
+    },
+    {
+      "name": "new_part_number",
+      "type": "string"
+    },
+    {
+      "name": "old_part_number",
+      "type": "string"
+    },
+    {
+      "name": "status",
+      "type": "string"
+    },
+    {
+      "name": "due_date",
+      "type": "string"
+    },
+    {
+      "name": "vendor",
+      "type": "string"
+    },
+    {
+      "name": "vendor_part_number",
+      "type": "string"
+    },
+    {
+      "name": "item_number",
+      "type": "int"
+    },
+    {
+      "name": "new_cost",
+      "type": "double"
+    },
+    {
+      "name": "obsolete_cost",
+      "type": "double"
+    },
+    {
+      "name": "is_ebom",
+      "type": "boolean"
+    },
+    {
+      "name": "is_entered_erp",
+      "type": "boolean"
+    },
+    {
+      "name": "is_mileage_tracked",
+      "type": "boolean"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "type": "record",
+  "name": "updt_join_updatesebom_public_v2",
+  "namespace": "contracts.derived",
+  "fields": [
+    {
+      "name": "ebom_id",
+      "type": "int"
+    },
+    {
+      "name": "update_id",
+      "type": "int"
+    },
+    {
+      "name": "specific_id",
+      "type": "int"
+    },
+    {
+      "name": "is_newpartaction",
+      "type": "boolean"
+    },
+    {
+      "name": "is_oldpartaction",
+      "type": "boolean"
+    },
+    {
+      "name": "lineitem_number",
+      "type": "int"
+    },
+    {
+      "name": "obs_cc",
+      "type": "string"
+    }
+  ]
+}
