@@ -208,6 +208,23 @@ services:
       - "3001:3000"
     environment:
       GF_SECURITY_ADMIN_PASSWORD: "admin"
+  
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: poc-otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./observability/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    depends_on:
+      - middleware
+      - redpanda
+      - connect
+      - schema-registry
+      - ksqldb-server
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - default   # misma red de tus servicios (la default del compose)
 
   # ----------------------------- SCHEMA REGISTRY ----------------------------------
   schema-registry:

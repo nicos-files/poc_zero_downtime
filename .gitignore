@@ -2,3 +2,5 @@
 .env.grafana
 .backup/
 /backup
+fix_pg_columns.sh
+fix_pg_tables_and_views.sh

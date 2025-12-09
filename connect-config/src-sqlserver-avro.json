@@ -10,7 +10,7 @@
     "database.encrypt": "true",
     "database.trustServerCertificate": "true",
     "database.names": "appdb",
-    "table.include.list": "dbo.customers,dbo.orders",
+    "table.include.list": "dbo.customers,dbo.heartbeat,dbo.orders",
     "topic.prefix": "mssql",
     "tombstones.on.delete": "false",
     "key.converter": "io.confluent.connect.avro.AvroConverter",

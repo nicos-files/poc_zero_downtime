@@ -320,18 +320,56 @@ def fetch_all(engine: str, sql: str, params: Iterable[Any] = ()) -> List[Dict[st
 # Helpers de INSERT/UPSERT seguros
 # ------------------------------------------------------------------------------
 
-def _build_insert_sql(table: str, payload_keys: List[str], pk: str, engine: str) -> Tuple[str, List[str]]:
-    _validate_identifier(table)
-    for c in payload_keys:
-        _validate_identifier(c)
-    placeholders = ", ".join(["%s"] * len(payload_keys))
-    cols = ", ".join(payload_keys)
-    if engine == "pg":
-        sql = f"INSERT INTO {table} ({cols}) VALUES ({placeholders}) RETURNING {pk}"
-    else:
-        sql = f"INSERT INTO {table} ({cols}) OUTPUT inserted.{pk} VALUES ({placeholders})"
-    return sql, payload_keys
+#def _build_insert_sql(table: str, payload_keys: List[str], pk: str, engine: str) -> Tuple[str, List[str]]:
+#    _validate_identifier(table)
+#    for c in payload_keys:
+#        _validate_identifier(c)
+#    placeholders = ", ".join(["%s"] * len(payload_keys))
+#    cols = ", ".join(payload_keys)
+#    if engine == "pg":
+#        sql = f"INSERT INTO {table} ({cols}) VALUES ({placeholders}) RETURNING {pk}"
+#    else:
+#        sql = f"INSERT INTO {table} ({cols}) OUTPUT inserted.{pk} VALUES ({placeholders})"
+#    return sql, payload_keys
 
+def _build_insert_sql(table: str, payload_keys: List[str], pk: str, engine: str) -> Tuple[str, List[str]]:
+    """
+    Construye el SQL de INSERT y devuelve (sql, ordered_payload_keys).
+
+    - payload_keys y pk son nombres lógicos (id, full_name, ...).
+    - Para MSSQL se usan tal cual.
+    - Para Postgres se mapean a columnas físicas en MAYÚSCULA con comillas,
+      pero el RETURNING expone el alias lógico para que row[pk] funcione.
+    """
+    _validate_identifier(table)
+    for c in payload_keys + [pk]:
+        _validate_identifier(c)
+
+    placeholders = ", ".join(["%s"] * len(payload_keys))
+
+    if engine == "pg":
+        phys_cols = []
+        for logical in payload_keys:
+            physical = logical.upper()
+            if logical in ("name", "full_name"):
+                physical = "FULL_NAME"
+            phys_cols.append(f'"{physical}"')
+        cols_sql = ", ".join(phys_cols)
+        # devolvemos el PK físico pero con alias lógico
+        phys_pk = f'"{pk.upper()}"'
+        sql = (
+            f"INSERT INTO {table} ({cols_sql}) "
+            f"VALUES ({placeholders}) "
+            f"RETURNING {phys_pk} AS {pk}"
+        )
+    else:
+        cols_sql = ", ".join(payload_keys)
+        sql = (
+            f"INSERT INTO {table} ({cols_sql}) "
+            f"OUTPUT inserted.{pk} VALUES ({placeholders})"
+        )
+
+    return sql, payload_keys
 
 def insert_one(engine: str, table: str, pk: str, fields: Iterable[str], data: Dict[str, Any]) -> Dict[str, Any]:
     """

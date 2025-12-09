@@ -1,0 +1,11 @@
+{
+  "type": "record",
+  "name": "heartbeat_public_v2",
+  "namespace": "contracts.derived",
+  "fields": [
+    {
+      "name": "ts_utc",
+      "type": "string"
+    }
+  ]
+}

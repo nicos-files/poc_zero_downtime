@@ -1,4 +1,4 @@
--- Generated 2025-12-02T13:51:16.447703Z  entity=customers
+-- Generated 2025-12-09T08:59:54.362664Z  entity=customers
 CREATE STREAM IF NOT EXISTS customers_base
   WITH (
     KAFKA_TOPIC='mssql.appdb.dbo.customers',

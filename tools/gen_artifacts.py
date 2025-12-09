@@ -375,28 +375,75 @@ def gen_sink_config_avro_v3(entity_name, topic_v3, table, pk_fields):
     }
 
 
+#def ddl_line(entity, table, proj_fields):
+#    # Siempre incluir la PK como primera columna
+#    key = next(iter(entity["projection"]["key"]))
+#    cols = [f"{key} INTEGER NOT NULL"]
+#
+#    for out, spec in proj_fields.items():
+#        if out == key:
+#            continue
+#        t = spec.get("type", "string")
+#        if out == "created_at":
+#            cols.append(f"{out} TIMESTAMPTZ NOT NULL")
+#        elif t in ("int32","int64"):
+#            cols.append(f"{out} INTEGER NOT NULL")
+#        elif t == "double":
+#            cols.append(f"{out} DOUBLE PRECISION NOT NULL")
+#        elif t == "boolean":
+#            cols.append(f"{out} BOOLEAN NOT NULL")
+#        else:
+#            cols.append(f"{out} TEXT NOT NULL")
+#
+#    cols_sql = ",\n  ".join(cols + [f"PRIMARY KEY ({key})"])
+#    return f"CREATE TABLE IF NOT EXISTS {table} (\n  {cols_sql}\n);\n"
+
 def ddl_line(entity, table, proj_fields):
-    # Siempre incluir la PK como primera columna
-    key = next(iter(entity["projection"]["key"]))
-    cols = [f"{key} INTEGER NOT NULL"]
+    # nombre lógico de la PK en el catálogo (p.ej. "id")
+    key_logical = next(iter(entity["projection"]["key"]))
+    key_sql = key_logical.upper()          # "ID"
+
+    # --- Caso especial: heartbeat v3 ---
+    if table == "public.heartbeat":
+        # El sink-postgres-heartbeat-v3 usa:
+        #   key:   ID        (Avro key)
+        #   value: id, ts_utc (Avro value)
+        # y genera INSERT INTO "public"."heartbeat" ("ID","id","ts_utc") ...
+        cols = [
+            f"\"{key_sql}\" INTEGER NOT NULL",  # "ID"
+            "id INTEGER NOT NULL",             # id (minúscula, sin comillas también serviría)
+            "ts_utc BIGINT NOT NULL",          # ts_utc como epoch ms
+        ]
+        cols_sql = ",\n  ".join(cols + [f"PRIMARY KEY (\"{key_sql}\")"])
+        return f"CREATE TABLE IF NOT EXISTS {table} (\n  {cols_sql}\n);\n"
+
+    # --- Caso general (customers, orders, etc.) ---
+    cols = [f"\"{key_sql}\" INTEGER NOT NULL"]
 
     for out, spec in proj_fields.items():
-        if out == key:
+        if out == key_logical:
+            # En general NO queremos la key duplicada en el value (customers/orders)
             continue
+
+        col_sql = out.upper()              # FULL_NAME, EMAIL, CREATED_AT
+        col_name = f"\"{col_sql}\""
+
         t = spec.get("type", "string")
         if out == "created_at":
-            cols.append(f"{out} TIMESTAMPTZ NOT NULL")
+            cols.append(f"{col_name} TIMESTAMPTZ NULL")
         elif t in ("int32","int64"):
-            cols.append(f"{out} INTEGER NOT NULL")
+            cols.append(f"{col_name} INTEGER NOT NULL")
         elif t == "double":
-            cols.append(f"{out} DOUBLE PRECISION NOT NULL")
+            cols.append(f"{col_name} DOUBLE PRECISION NOT NULL")
         elif t == "boolean":
-            cols.append(f"{out} BOOLEAN NOT NULL")
+            cols.append(f"{col_name} BOOLEAN NOT NULL")
         else:
-            cols.append(f"{out} TEXT NOT NULL")
+            cols.append(f"{col_name} TEXT NOT NULL")
 
-    cols_sql = ",\n  ".join(cols + [f"PRIMARY KEY ({key})"])
+    cols_sql = ",\n  ".join(cols + [f"PRIMARY KEY (\"{key_sql}\")"])
     return f"CREATE TABLE IF NOT EXISTS {table} (\n  {cols_sql}\n);\n"
+
+
 
 # ------------------ SOURCE Debezium AVRO ------------------
 def parse_source_topic(source_topic):
@@ -534,7 +581,7 @@ def main():
         ksql_avro_v3_sql = gen_ksql_avro_v3(name, proj_fields, key_fields)
         with open(f"ksql/{name}_public_v3_avro.sql", "w", encoding="utf-8") as f:
             f.write(ksql_avro_v3_sql)
-    
+
         # 6) NUEVO: sink v3 AVRO (sink-postgres-customers-v3, sink-postgres-orders-v3)
         topic_v3 = f"{name}_public_v3_avro".lower()
         sink_cfg_v3 = gen_sink_config_avro_v3(name, topic_v3, table, key_fields)

@@ -46,3 +46,21 @@ entities:
         total_amount: { from: total_amount, type: double }
         created_at:   { from: created_at,   type: string, format: date-time }
       allow_delete: true
+
+
+  heartbeat:
+    source:
+      topic: mssql.appdb.dbo.heartbeat
+      key: [id]
+      fields:
+        - id
+        - ts_utc
+        - __deleted
+    projection:
+      topic: heartbeat_public_v2
+      table: public.heartbeat
+      key: [id]
+      fields:
+        id:     { from: id,     type: int32 }
+        ts_utc: { from: ts_utc, type: string, format: date-time }
+      allow_delete: false

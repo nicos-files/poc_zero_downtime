@@ -30,6 +30,20 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID('dbo.heartbeat') IS NULL
+BEGIN
+  CREATE TABLE dbo.heartbeat (
+    id INT NOT NULL PRIMARY KEY,
+    ts_utc DATETIME2(3) NOT NULL
+  );
+
+  -- Seed inicial para que Debezium tenga algo que snapshooter / trackear
+  INSERT INTO dbo.heartbeat (id, ts_utc)
+  VALUES (1, SYSUTCDATETIME());
+END
+GO
+
+
 -- Habilitar CDC a nivel DB
 IF NOT EXISTS (SELECT 1 FROM sys.databases WHERE name='appdb' AND is_cdc_enabled=1)
 BEGIN
@@ -52,6 +66,16 @@ BEGIN
   EXEC sys.sp_cdc_enable_table
     @source_schema = N'dbo',
     @source_name   = N'orders',
+    @role_name     = NULL,
+    @supports_net_changes = 0;
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM cdc.change_tables WHERE source_object_id = OBJECT_ID('dbo.heartbeat'))
+BEGIN
+  EXEC sys.sp_cdc_enable_table
+    @source_schema = N'dbo',
+    @source_name   = N'heartbeat',
     @role_name     = NULL,
     @supports_net_changes = 0;
 END

@@ -86,8 +86,8 @@ connectors-upsert:
 
 connect: connectors-upsert
 
-smoke:
-	$(TOOLS) bash -lc 'SR_URL="$(SR_URL)" KSQL_URL="$(KSQL_URL)" CONNECT_URL="$(CONNECT)" ./tools/scripts/smoke.sh'
+#smoke:
+#	$(TOOLS) bash -lc 'SR_URL="$(SR_URL)" KSQL_URL="$(KSQL_URL)" CONNECT_URL="$(CONNECT)" ./tools/scripts/smoke.sh'
 
 
 
@@ -133,3 +133,84 @@ connect-internal-topics-reset-compact:
 	$(COMPOSE) up -d --no-deps --build connect ; \
 	until curl -sfm 2 $(CONNECT)/ >/dev/null; do echo "esperando Connect…"; sleep 1; done ; \
 	echo "Connect OK"
+
+
+
+
+traffic:
+	./scripts/load_traffic.sh
+
+smoke:
+	@echo "==========================================="
+	@echo "===> SMOKE: Schema Registry / ksql / Connect"
+	@echo "==========================================="
+	$(TOOLS) bash -lc 'SR_URL="$(SR_URL)" KSQL_URL="$(KSQL_URL)" CONNECT_URL="$(CONNECT)" ./tools/scripts/smoke.sh'
+
+	@echo ""
+	@echo "==========================================="
+	@echo "===> Verificando estado del conector Debezium"
+	@echo "==========================================="
+	@curl -s http://localhost:8083/connectors/src-sqlserver-avro/status | jq '.connector.state,.tasks[0].state'
+
+	@echo ""
+	@echo "==========================================="
+	@echo "===> Verificando topics CDC de Debezium en Redpanda"
+	@echo "==========================================="
+	@docker compose exec -T redpanda rpk topic list | grep mssql.appdb.dbo.customers  || (echo "ERROR: falta topic customers" && exit 1)
+	@docker compose exec -T redpanda rpk topic list | grep mssql.appdb.dbo.orders     || (echo "ERROR: falta topic orders" && exit 1)
+	@docker compose exec -T redpanda rpk topic list | grep mssql.appdb.dbo.heartbeat  || (echo "ERROR: falta topic heartbeat" && exit 1)
+
+	@echo ""
+	@echo "==========================================="
+	@echo "===> Verificando topics públicos generados por ksqlDB (v3 / Avro)"
+	@echo "==========================================="
+	@docker compose exec -T redpanda rpk topic list | grep customers_public_v3_avro   || (echo "ERROR: falta topic customers_public_v3_avro" && exit 1)
+	@docker compose exec -T redpanda rpk topic list | grep orders_public_v3_avro      || (echo "ERROR: falta topic orders_public_v3_avro" && exit 1)
+	@docker compose exec -T redpanda rpk topic list | grep heartbeat_public_v3_avro   || (echo "ERROR: falta topic heartbeat_public_v3_avro" && exit 1)
+
+	@echo ""
+	@echo "==========================================="
+	@echo "===> Verificando streams en ksqlDB (SHOW STREAMS)"
+	@echo "==========================================="
+	@docker compose run --rm -T tools bash -lc 'curl -s -X POST http://ksqldb-server:8088/ksql -H "Content-Type: application/vnd.ksql.v1+json" -d "{\"ksql\":\"SHOW STREAMS;\"}" | jq .'
+
+	@echo ""
+	@echo "==========================================="
+	@echo "===> Verificando datos en Postgres"
+	@echo "==========================================="
+	@docker compose exec -T postgres \
+	  psql -U "$${PG_USER:-postgres}" -d "$${PG_DB:-appdb}" -c "SELECT COUNT(*) AS customers  FROM public.customers;"
+	@docker compose exec -T postgres \
+	  psql -U "$${PG_USER:-postgres}" -d "$${PG_DB:-appdb}" -c "SELECT COUNT(*) AS orders     FROM public.orders;"
+	@docker compose exec -T postgres \
+	  psql -U "$${PG_USER:-postgres}" -d "$${PG_DB:-appdb}" -c "SELECT COUNT(*) AS heartbeat  FROM public.heartbeat;"
+
+	@echo ""
+	@echo "==========================================="
+	@echo "===> Comparando SQL Server vs Postgres"
+	@echo "==========================================="
+	@MSSQL_PW="$$(docker compose exec -T connect bash -lc 'printenv SQLSERVER_PASSWORD')" ; \
+	MSYS_NO_PATHCONV=1 docker compose exec -T sqlserver /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$$MSSQL_PW" -Q "SET NOCOUNT ON; USE appdb; SELECT COUNT(*) AS customers FROM dbo.customers;" > /tmp/mssql_customers.txt ; \
+	MSSQL_C="$$(tail -n 1 /tmp/mssql_customers.txt | tr -d ' \r\n')" ; \
+	PG_C="$$(docker compose exec -T postgres psql -U "$${PG_USER:-postgres}" -d "$${PG_DB:-appdb}" -t -c "SELECT COUNT(*) FROM public.customers;" | tr -d ' \r\n')" ; \
+	echo "Customers: SQLServer=$$MSSQL_C vs Postgres=$$PG_C" ; \
+	[ "$$MSSQL_C" = "$$PG_C" ] || (echo "❌ ERROR: mismatch customers" && exit 1)
+
+	@MSSQL_PW="$$(docker compose exec -T connect bash -lc 'printenv SQLSERVER_PASSWORD')" ; \
+	MSYS_NO_PATHCONV=1 docker compose exec -T sqlserver /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$$MSSQL_PW" -Q "SET NOCOUNT ON; USE appdb; SELECT COUNT(*) AS orders FROM dbo.orders;" > /tmp/mssql_orders.txt ; \
+	MSSQL_O="$$(tail -n 1 /tmp/mssql_orders.txt | tr -d ' \r\n')" ; \
+	PG_O="$$(docker compose exec -T postgres psql -U "$${PG_USER:-postgres}" -d "$${PG_DB:-appdb}" -t -c "SELECT COUNT(*) FROM public.orders;" | tr -d ' \r\n')" ; \
+	echo "Orders:    SQLServer=$$MSSQL_O vs Postgres=$$PG_O" ; \
+	[ "$$MSSQL_O" = "$$PG_O" ] || (echo "❌ ERROR: mismatch orders" && exit 1)
+
+	@MSSQL_PW="$$(docker compose exec -T connect bash -lc 'printenv SQLSERVER_PASSWORD')" ; \
+	MSYS_NO_PATHCONV=1 docker compose exec -T sqlserver /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$$MSSQL_PW" -Q "SET NOCOUNT ON; USE appdb; SELECT COUNT(*) AS hb FROM dbo.heartbeat;" > /tmp/mssql_hb.txt ; \
+	MSSQL_H="$$(tail -n 1 /tmp/mssql_hb.txt | tr -d ' \r\n')" ; \
+	PG_H="$$(docker compose exec -T postgres psql -U "$${PG_USER:-postgres}" -d "$${PG_DB:-appdb}" -t -c "SELECT COUNT(*) FROM public.heartbeat;" | tr -d ' \r\n')" ; \
+	echo "Heartbeat: SQLServer=$$MSSQL_H vs Postgres=$$PG_H" ; \
+	[ "$$MSSQL_H" = "$$PG_H" ] || (echo "❌ ERROR: mismatch heartbeat" && exit 1)
+
+	@echo ""
+	@echo "==========================================="
+	@echo "✔️  COMPLETO: pipeline CDC → Kafka → ksql → sinks → Postgres verificado"
+	@echo "==========================================="
